@@ -10,13 +10,6 @@ from groq import Groq
 GROQ_API_KEY = st.secrets["GROQ_API_KEY"]
 # ══════════════════════════════════════════════
 
-st.set_page_config(
-    page_title="📚 BookSight Analytics",
-    page_icon="📚",
-    layout="wide",
-    initial_sidebar_state="expanded"
-)
-
 st.markdown("""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&display=swap');
@@ -38,6 +31,10 @@ st.markdown("""
     --text:      #EDE9FE;
     --muted:     #6B5F8A;
     --muted2:    #9480C4;
+    --radius-lg: 18px;
+    --radius-md: 12px;
+    --shadow-soft: 0 8px 24px rgba(0,0,0,.35);
+    --shadow-glow: 0 0 0 1px rgba(167,139,250,.08), 0 12px 32px rgba(124,58,237,.18);
 }
 
 * { font-family: 'Plus Jakarta Sans', sans-serif; box-sizing: border-box; }
@@ -45,30 +42,87 @@ html, body, [data-testid="stAppViewContainer"], [data-testid="stMain"] {
     background: var(--bg) !important;
     color: var(--text) !important;
 }
+[data-testid="stAppViewContainer"] { position: relative; }
+[data-testid="stAppViewContainer"]::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    background:
+        radial-gradient(650px 420px at 88% -6%, rgba(124,58,237,.20), transparent 60%),
+        radial-gradient(520px 380px at -6% 18%, rgba(244,114,182,.10), transparent 60%),
+        radial-gradient(600px 500px at 60% 110%, rgba(103,232,249,.06), transparent 60%);
+}
+[data-testid="stMain"] .block-container { position: relative; z-index: 1; }
+
 [data-testid="stSidebar"] {
     background: var(--surface) !important;
     border-right: 1px solid var(--border) !important;
 }
 [data-testid="stSidebar"] * { color: var(--text) !important; }
-.block-container { padding: 2rem 2.5rem !important; max-width: 100% !important; }
+[data-testid="stSidebarUserContent"] {
+    overflow-y: auto !important;
+    max-height: 100vh !important;
+    padding-bottom: 40px !important;
+}
+
+/* ── Brand title (gradient text, guaranteed visible) ── */
+.brand-title {
+    font-family: 'Space Grotesk', sans-serif !important;
+    font-size: 1.3rem !important;
+    font-weight: 700 !important;
+    color: var(--p3) !important;
+    background: linear-gradient(135deg, var(--p3), var(--pink)) !important;
+    -webkit-background-clip: text !important;
+    background-clip: text !important;
+    -webkit-text-fill-color: transparent !important;
+    display: inline-block !important;
+    line-height: 1.4 !important;
+    padding-top: 4px !important;
+    margin-top: 6px !important;
+    overflow: visible !important;
+}
+
+[data-testid="stMain"] .block-container {
+    padding: 2rem 2.5rem !important;
+    max-width: 100% !important;
+    animation: fadeInUp .45s ease both;
+}
+[data-testid="stSidebar"] .block-container {
+    padding: 1rem 1.2rem !important;
+}
+</style>
+""", unsafe_allow_html=True)
+
+st.markdown("""
+<style>
+@keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(10px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+@media (prefers-reduced-motion: reduce) {
+    .block-container, .kpi-card, .chat-user, .chat-bot { animation: none !important; transition: none !important; }
+}
 
 /* ── KPI cards ── */
 .kpi-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 14px; margin-bottom: 28px; }
 .kpi-card {
     background: linear-gradient(145deg, var(--card), var(--card2));
     border: 1px solid var(--border);
-    border-radius: 18px;
-    padding: 20px 16px 18px;
+    border-radius: var(--radius-lg);
+    padding: 22px 16px 20px;
     text-align: center;
     position: relative;
     overflow: hidden;
-    transition: transform .25s, border-color .25s;
+    box-shadow: var(--shadow-soft);
+    transition: transform .28s cubic-bezier(.2,.8,.2,1), border-color .28s, box-shadow .28s;
 }
 .kpi-card::after {
     content: '';
     position: absolute;
     inset: 0;
-    border-radius: 18px;
+    border-radius: var(--radius-lg);
     background: linear-gradient(135deg, rgba(167,139,250,.08), rgba(124,58,237,.04));
     pointer-events: none;
 }
@@ -80,8 +134,19 @@ html, body, [data-testid="stAppViewContainer"], [data-testid="stMain"] {
     border-radius: 0 0 4px 4px;
     background: linear-gradient(90deg, var(--p2), var(--p1), var(--pink));
 }
-.kpi-card:hover { transform: translateY(-3px); border-color: var(--border2); }
-.kpi-icon { font-size: 1.5rem; margin-bottom: 10px; display: block; }
+.kpi-card:hover {
+    transform: translateY(-4px);
+    border-color: var(--border2);
+    box-shadow: var(--shadow-glow);
+}
+.kpi-icon {
+    width: 42px; height: 42px; margin: 0 auto 12px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.25rem;
+    border-radius: 12px;
+    background: linear-gradient(145deg, rgba(124,58,237,.22), rgba(244,114,182,.12));
+    border: 1px solid var(--border2);
+}
 .kpi-value {
     font-family: 'Space Grotesk', sans-serif;
     font-size: 2rem;
@@ -105,26 +170,49 @@ html, body, [data-testid="stAppViewContainer"], [data-testid="stMain"] {
     font-size: 1rem;
     font-weight: 600;
     color: var(--p3);
-    padding-bottom: 8px;
-    border-bottom: 1px solid var(--border);
+    padding-bottom: 10px;
     margin-bottom: 14px;
+    position: relative;
+}
+.sec-hdr::after {
+    content: '';
+    position: absolute;
+    left: 0; bottom: 0; height: 1px; width: 100%;
+    background: linear-gradient(90deg, var(--border2), var(--border) 40%, transparent);
 }
 
 /* ── Page title ── */
 .page-title {
-    font-family: 'Space Grotesk', sans-serif;
-    font-size: 2.2rem;
-    font-weight: 700;
-    background: linear-gradient(135deg, var(--p3) 0%, var(--pink) 60%, var(--cyan) 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    margin-bottom: 2px;
-    line-height: 1.1;
+    font-family: 'Space Grotesk', sans-serif !important;
+    font-size: 2.2rem !important;
+    font-weight: 700 !important;
+    color: var(--p3) !important;
+    background: linear-gradient(135deg, var(--p3) 0%, var(--pink) 60%, var(--cyan) 100%) !important;
+    -webkit-background-clip: text !important;
+    background-clip: text !important;
+    -webkit-text-fill-color: transparent !important;
+    display: inline-block !important;
+    padding-top: 6px !important;
+    margin-bottom: 2px !important;
+    line-height: 1.4 !important;
+    overflow: visible !important;
 }
+[data-testid="stMarkdownContainer"] { overflow: visible !important; }
 .page-sub { color: var(--muted2); font-size: 0.85rem; margin-bottom: 26px; }
 
+/* ── Charts & dataframes as cards ── */
+[data-testid="stPlotlyChart"], [data-testid="stDataFrame"] {
+    background: linear-gradient(145deg, var(--card), var(--card2));
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 14px;
+    box-shadow: var(--shadow-soft);
+    transition: border-color .25s;
+}
+[data-testid="stPlotlyChart"]:hover { border-color: var(--border2); }
+
 /* ── Chat ── */
-.chat-wrap { max-height: 480px; overflow-y: auto; padding: 4px 0 12px; }
+.chat-wrap { max-height: 480px; overflow-y: auto; padding: 4px 4px 12px; }
 .chat-user {
     background: linear-gradient(135deg, var(--p2), #4C1D95);
     border-radius: 16px 16px 4px 16px;
@@ -134,6 +222,7 @@ html, body, [data-testid="stAppViewContainer"], [data-testid="stMain"] {
     font-size: 0.88rem;
     line-height: 1.6;
     box-shadow: 0 4px 16px rgba(124,58,237,.3);
+    animation: popIn .3s ease both;
 }
 .chat-bot {
     background: var(--card2);
@@ -145,28 +234,81 @@ html, body, [data-testid="stAppViewContainer"], [data-testid="stMain"] {
     font-size: 0.88rem;
     line-height: 1.85;
     white-space: pre-wrap;
+    box-shadow: var(--shadow-soft);
+    animation: popIn .35s ease both;
+}
+@keyframes popIn {
+    from { opacity: 0; transform: translateY(6px) scale(.98); }
+    to   { opacity: 1; transform: translateY(0) scale(1); }
 }
 .chat-lbl { font-size: 0.72rem; color: var(--p1); font-weight: 700; margin-bottom: 5px; letter-spacing:.05em; }
 
-/* ── Sidebar ── */
-[data-testid="stRadio"] label { font-size: 0.88rem !important; padding: 5px 0 !important; }
+/* ── Sidebar nav (radio as pill list) ── */
+[data-testid="stSidebar"] [data-testid="stRadio"] > div[role="radiogroup"] {
+    gap: 4px !important;
+}
+[data-testid="stSidebar"] [data-testid="stRadio"] label {
+    font-size: 0.9rem !important;
+    padding: 11px 14px !important;
+    margin: 0 !important;
+    border-radius: 12px !important;
+    border-left: 3px solid transparent;
+    cursor: pointer;
+    transition: background .2s ease, border-color .2s ease, transform .15s ease;
+}
+[data-testid="stSidebar"] [data-testid="stRadio"] label:hover {
+    background: rgba(124,58,237,.12);
+    transform: translateX(2px);
+}
+[data-testid="stSidebar"] [data-testid="stRadio"] label:has(input:checked) {
+    background: linear-gradient(135deg, rgba(124,58,237,.28), rgba(244,114,182,.10));
+    border-left: 3px solid var(--p1);
+}
+[data-testid="stSidebar"] [data-testid="stRadio"] label:has(input:checked) p {
+    color: var(--p3) !important;
+    font-weight: 700 !important;
+}
+[data-testid="stSidebar"] input[type="radio"] { accent-color: var(--p2); }
+
 [data-testid="stSelectbox"] > div, [data-testid="stMultiSelect"] > div {
     background: var(--card) !important;
     border: 1px solid var(--border) !important;
     border-radius: 10px !important;
+    transition: border-color .2s;
+}
+[data-testid="stSelectbox"] > div:focus-within, [data-testid="stMultiSelect"] > div:focus-within {
+    border-color: var(--p1) !important;
+}
+[data-baseweb="tag"] {
+    background: linear-gradient(135deg, var(--p2), var(--p4)) !important;
+    border-radius: 8px !important;
 }
 [data-testid="stMetric"] {
     background: var(--card) !important;
     border: 1px solid var(--border) !important;
-    border-radius: 12px !important;
+    border-radius: var(--radius-md) !important;
     padding: 14px !important;
+    transition: border-color .2s, transform .2s;
 }
+[data-testid="stMetric"]:hover { border-color: var(--border2); transform: translateY(-2px); }
 [data-testid="stTextInput"] input {
     background: var(--card) !important;
     border: 1px solid var(--border) !important;
     color: var(--text) !important;
     border-radius: 10px !important;
+    transition: border-color .2s, box-shadow .2s;
 }
+[data-testid="stTextInput"] input:focus {
+    border-color: var(--p1) !important;
+    box-shadow: 0 0 0 3px rgba(167,139,250,.15) !important;
+}
+[data-testid="stSlider"] [data-baseweb="slider"] div[role="slider"] {
+    background: var(--p1) !important;
+    box-shadow: 0 0 0 4px rgba(167,139,250,.2) !important;
+}
+[data-testid="stSlider"] div[data-testid="stTickBarMin"],
+[data-testid="stSlider"] div[data-testid="stTickBarMax"] { color: var(--muted2) !important; }
+
 /* Buttons */
 .stButton > button {
     background: linear-gradient(135deg, var(--p2), var(--p4)) !important;
@@ -175,14 +317,26 @@ html, body, [data-testid="stAppViewContainer"], [data-testid="stMain"] {
     border-radius: 10px !important;
     font-weight: 600 !important;
     font-size: 0.82rem !important;
+    box-shadow: 0 4px 14px rgba(124,58,237,.28) !important;
+    transition: transform .15s ease, box-shadow .15s ease, opacity .15s ease !important;
 }
-.stButton > button:hover { opacity: .85 !important; }
+.stButton > button:hover {
+    opacity: .92 !important;
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(124,58,237,.4) !important;
+}
+.stButton > button:active { transform: translateY(0); }
+.stButton > button:focus-visible {
+    outline: 2px solid var(--p3) !important;
+    outline-offset: 2px;
+}
 
 #MainMenu, footer { visibility: hidden; }
 .stDeployButton { display: none; }
-::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: var(--bg); }
 ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: var(--p4); }
 </style>
 """, unsafe_allow_html=True)
 
@@ -213,11 +367,7 @@ with st.sidebar:
     st.markdown("""
     <div style='text-align:center;padding:24px 0 28px'>
         <div style='font-size:2.6rem;filter:drop-shadow(0 0 12px #7C3AED)'>📚</div>
-        <div style='font-family:Space Grotesk,sans-serif;font-size:1.3rem;font-weight:700;
-                    background:linear-gradient(135deg,#C4B5FD,#F472B6);
-                    -webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-top:6px'>
-            BookSight
-        </div>
+        <div class='brand-title'>BookSight</div>
         <div style='font-size:0.72rem;color:#6B5F8A;margin-top:3px;letter-spacing:.06em'>ANALYTICS DASHBOARD</div>
     </div>
     """, unsafe_allow_html=True)
@@ -229,7 +379,7 @@ with st.sidebar:
     st.markdown("<div style='font-size:.72rem;color:#6B5F8A;letter-spacing:.1em;text-transform:uppercase;margin-bottom:10px'>⚙ Filters</div>", unsafe_allow_html=True)
 
     all_cats = sorted(df["Category"].unique())
-    selected_cats = st.multiselect("Categories", all_cats, default=all_cats, placeholder="All")
+    selected_cats = st.multiselect("Categories", all_cats, default=[], placeholder="All")
     price_range = st.slider("Price (£)", 0.0, 60.0, (0.0, 60.0), 1.0)
     min_rating = st.slider("Min Rating ⭐", 1, 5, 1)
 
